@@ -21,7 +21,7 @@ export function NavMain({
   return (
     <>
       <SidebarGroup>
-        <SidebarGroupLabel className="text-lg font-bold text-center w-full mb-4 text-nowrap">waitlists</SidebarGroupLabel>
+        <SidebarGroupLabel className="text-lg font-bold text-center w-full mb-4 text-nowrap">Idea Validator</SidebarGroupLabel>
         <SidebarMenu>
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>

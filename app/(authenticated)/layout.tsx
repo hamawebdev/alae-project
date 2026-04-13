@@ -1,9 +1,13 @@
-export default function RootLayout({
+import LayoutOne from "@/components/app-layouts/layout-one/layout-one";
+
+export default function AuthenticatedLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return (<>
-    {children}
-  </>);
+  return (
+    <LayoutOne>
+      {children}
+    </LayoutOne>
+  );
 }
