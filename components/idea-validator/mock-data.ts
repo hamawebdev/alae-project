@@ -158,6 +158,7 @@ export const MOCK_EVALUATION: IdeaEvaluation = {
             reasoning: "The feature scope is tightly aligned with the target audience's core problems.",
         },
     ],
+    competitorMetrics: [],
 };
 
 export const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));

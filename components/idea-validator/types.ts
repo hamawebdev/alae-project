@@ -63,6 +63,7 @@ export interface IdeaEvaluationMetric {
 export interface IdeaEvaluation {
     overallScore: number;
     metrics: IdeaEvaluationMetric[];
+    competitorMetrics: IdeaEvaluationMetric[];
 }
 
 export interface ValidatorState {

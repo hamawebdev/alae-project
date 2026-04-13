@@ -1,6 +1,6 @@
 "use client";
 
-import { ValidatorState } from "./types";
+import { IdeaEvaluationMetric, ValidatorState } from "./types";
 import { Button } from "@/components/ui/button";
 import { RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -10,10 +10,53 @@ interface EvaluationPanelProps {
     onReset: () => void;
 }
 
+interface MetricsGridProps {
+    metrics: IdeaEvaluationMetric[];
+    className: string;
+}
+
+function MetricsGrid({ metrics, className }: MetricsGridProps) {
+    if (metrics.length === 0) return null;
+
+    return (
+        <div className={className}>
+            {metrics.map(metric => (
+                <div key={metric.id} className="bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 p-5 rounded-2xl shadow-sm">
+                    <div className="flex justify-between items-center mb-3 gap-4">
+                        <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">{metric.label}</span>
+                        <span
+                            className={cn(
+                                "font-bold text-lg",
+                                metric.percentage > 70 ? "text-green-600" : metric.percentage > 40 ? "text-amber-500" : "text-red-500"
+                            )}
+                        >
+                            {metric.percentage}%
+                        </span>
+                    </div>
+
+                    <div className="w-full bg-gray-100 dark:bg-zinc-900 rounded-full h-1.5 mb-4">
+                        <div
+                            className={cn(
+                                "h-1.5 rounded-full bg-blue-500",
+                                metric.percentage > 70 ? "bg-green-500" : metric.percentage > 40 ? "bg-amber-500" : "bg-red-500"
+                            )}
+                            style={{ width: `${metric.percentage}%` }}
+                        />
+                    </div>
+
+                    <p className="font-medium text-gray-900 dark:text-gray-100 text-sm mb-1">{metric.explanation}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{metric.reasoning}</p>
+                </div>
+            ))}
+        </div>
+    );
+}
+
 export function EvaluationPanel({ state, onReset }: EvaluationPanelProps) {
     if (!state.evaluation) return null;
 
     const score = state.evaluation.overallScore;
+    const competitorMetrics = state.evaluation.competitorMetrics ?? [];
 
     return (
         <div className="w-full flex flex-col space-y-8 animate-in slide-in-from-bottom flex-fade-in duration-500">
@@ -44,32 +87,20 @@ export function EvaluationPanel({ state, onReset }: EvaluationPanelProps) {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
-                {state.evaluation.metrics.map(metric => (
-                    <div key={metric.id} className="bg-white dark:bg-zinc-950 border border-gray-200 dark:border-zinc-800 p-5 rounded-2xl shadow-sm">
-                        <div className="flex justify-between items-center mb-3">
-                            <span className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">{metric.label}</span>
-                            <span className={cn(
-                                "font-bold text-lg",
-                                metric.percentage > 70 ? "text-green-600" : metric.percentage > 40 ? "text-amber-500" : "text-red-500"
-                            )}>{metric.percentage}%</span>
-                        </div>
+            <MetricsGrid metrics={state.evaluation.metrics} className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4" />
 
-                        <div className="w-full bg-gray-100 dark:bg-zinc-900 rounded-full h-1.5 mb-4">
-                            <div
-                                className={cn(
-                                    "h-1.5 rounded-full bg-blue-500",
-                                    metric.percentage > 70 ? "bg-green-500" : metric.percentage > 40 ? "bg-amber-500" : "bg-red-500"
-                                )}
-                                style={{ width: `${metric.percentage}%` }}
-                            />
-                        </div>
-
-                        <p className="font-medium text-gray-900 dark:text-gray-100 text-sm mb-1">{metric.explanation}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{metric.reasoning}</p>
+            {competitorMetrics.length > 0 && (
+                <section className="space-y-4">
+                    <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-zinc-800">
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">Competitor Success Metrics</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                            A closer read on how this concept stands apart in a crowded market and how hard it will be to win users away from current tools.
+                        </p>
                     </div>
-                ))}
-            </div>
+
+                    <MetricsGrid metrics={competitorMetrics} className="grid grid-cols-1 md:grid-cols-2 gap-6" />
+                </section>
+            )}
 
             <div className="flex justify-center pt-8 border-t border-gray-100 dark:border-zinc-800">
                 <Button

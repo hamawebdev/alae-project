@@ -1,7 +1,7 @@
 "use server";
 
 import { GoogleGenAI } from '@google/genai';
-import { Question, CompetitorProfile, PRDSection, IdeaEvaluation, FeatureCandidate } from '@/components/idea-validator/types';
+import { Question, CompetitorProfile, PRDSection, IdeaEvaluation, IdeaEvaluationMetric, FeatureCandidate } from '@/components/idea-validator/types';
 
 // Let the module fail gracefully if no API key is set so the UI can handle it.
 const getGenAI = () => {
@@ -11,6 +11,62 @@ const getGenAI = () => {
   }
   return new GoogleGenAI({ apiKey });
 };
+
+const BUSINESS_METRIC_ORDER = [
+  "Market Saturation",
+  "Willingness to Pay",
+  "Execution Clarity",
+];
+
+const COMPETITOR_METRIC_ORDER = [
+  "Competitor Density",
+  "Differentiation Strength",
+  "Feature Gap Opportunity",
+  "Switching Potential",
+];
+
+function normalizeMetricList(metrics: unknown, orderedLabels: string[]): IdeaEvaluationMetric[] {
+  if (!Array.isArray(metrics)) {
+    return [];
+  }
+
+  const metricOrder = new Map(orderedLabels.map((label, index) => [label, index]));
+
+  return metrics
+    .filter((metric): metric is IdeaEvaluationMetric => {
+      if (!metric || typeof metric !== "object") {
+        return false;
+      }
+
+      const candidate = metric as Partial<IdeaEvaluationMetric>;
+
+      return (
+        typeof candidate.id === "string" &&
+        typeof candidate.label === "string" &&
+        typeof candidate.percentage === "number" &&
+        typeof candidate.explanation === "string" &&
+        typeof candidate.reasoning === "string"
+      );
+    })
+    .sort((left, right) => {
+      const leftOrder = metricOrder.get(left.label) ?? Number.MAX_SAFE_INTEGER;
+      const rightOrder = metricOrder.get(right.label) ?? Number.MAX_SAFE_INTEGER;
+
+      return leftOrder - rightOrder;
+    });
+}
+
+function normalizeIdeaEvaluation(evaluation: unknown): IdeaEvaluation {
+  const rawEvaluation = evaluation && typeof evaluation === "object"
+    ? evaluation as Partial<IdeaEvaluation>
+    : {};
+
+  return {
+    overallScore: typeof rawEvaluation.overallScore === "number" ? rawEvaluation.overallScore : 0,
+    metrics: normalizeMetricList(rawEvaluation.metrics, BUSINESS_METRIC_ORDER),
+    competitorMetrics: normalizeMetricList(rawEvaluation.competitorMetrics, COMPETITOR_METRIC_ORDER),
+  };
+}
 
 export async function generateIntakeQuestions(ideaContext: string): Promise<Question[]> {
   const ai = getGenAI();
@@ -218,12 +274,25 @@ PRD: ${JSON.stringify(prd)}
 Competitors: ${JSON.stringify(competitors.map(c => ({ name: c.name, saturation: c.saturationSignal })))}
 
 Score the idea from 0 to 100 overall.
-Then provide exactly three metrics evaluating: "Market Saturation", "Willingness to Pay", and "Execution Clarity".
+Then return two metric groups:
+1. "metrics" with exactly three items in this order: "Market Saturation", "Willingness to Pay", and "Execution Clarity".
+2. "competitorMetrics" with exactly four items in this order: "Competitor Density", "Differentiation Strength", "Feature Gap Opportunity", and "Switching Potential".
+
+Use those exact labels for each metric.
 
 Return valid JSON adhering to this structure:
 {
   "overallScore": number,
   "metrics": [
+    {
+      "id": "string",
+      "label": "string",
+      "percentage": number (0-100),
+      "explanation": "string (short 4-5 word summary)",
+      "reasoning": "string (1-2 sentence detailed reasoning)"
+    }
+  ],
+  "competitorMetrics": [
     {
       "id": "string",
       "label": "string",
@@ -248,7 +317,7 @@ Return valid JSON adhering to this structure:
     if (!output) throw new Error("No output generated");
 
     const rawData = output.replace(/^```json/, '').replace(/```$/, '').trim();
-    return JSON.parse(rawData);
+    return normalizeIdeaEvaluation(JSON.parse(rawData));
   } catch (error) {
     console.error("Gemini Error:", error);
     throw new Error("Failed to evaluate idea with AI.");
